@@ -18,6 +18,7 @@ from datetime import datetime
 
 PROJECTS_DIR = Path.home() / ".claude" / "projects"
 SKILLS_DIR = Path.home() / ".claude" / "skills"
+COMMANDS_DIR = Path.home() / ".claude" / "commands"
 PLUGINS_JSON = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
 
 
@@ -31,13 +32,29 @@ def get_local_skills():
     return {d.name for d in SKILLS_DIR.iterdir() if d.is_dir()}
 
 
+def get_installed_commands():
+    """
+    Returns set of command IDs from ~/.claude/commands/
+    - Top-level:   commands/foo.md           → "foo"
+    - Subdirectory: commands/gsd/check-todos.md → "gsd:check-todos"
+    """
+    result = set()
+    if not COMMANDS_DIR.exists():
+        return result
+    for item in COMMANDS_DIR.iterdir():
+        if item.is_file() and item.suffix == ".md":
+            result.add(item.stem)
+        elif item.is_dir():
+            for cmd in item.iterdir():
+                if cmd.is_file() and cmd.suffix == ".md":
+                    result.add(f"{item.name}:{cmd.stem}")
+    return result
+
+
 def get_installed_plugins():
     """
     Returns {skill_id: {"plugin_key": str, "install_path": str}}
-
-    skill_id examples:
-      "frontend-design"                     (single-skill plugin)
-      "agent-architecture:bdi-mental-states" (multi-skill plugin)
+    skill_id is always "plugin-name:sub-skill-name".
     """
     result = {}
     if not PLUGINS_JSON.exists():
@@ -69,24 +86,25 @@ def get_installed_plugins():
 
 
 def get_skill_description(skill_name, plugin_info=None):
-    """Read the description field from skill.yml. Returns '' if not found."""
-    yml_path = SKILLS_DIR / skill_name / "skill.yml"
+    """Read the description field from skill.yml or SKILL.md. Returns '' if not found."""
+    candidates = [SKILLS_DIR / skill_name / "skill.yml"]
 
-    if not yml_path.exists() and plugin_info:
-        sub = skill_name.split(":", 1)[1] if ":" in skill_name else skill_name.split(":")[0]
-        yml_path = Path(plugin_info["install_path"]) / "skills" / sub / "skill.yml"
+    if plugin_info:
+        sub = skill_name.split(":", 1)[1] if ":" in skill_name else skill_name
+        base = Path(plugin_info["install_path"]) / "skills" / sub
+        candidates += [base / "skill.yml", base / "SKILL.md"]
 
-    if not yml_path.exists():
-        return ""
-
-    try:
-        text = yml_path.read_text(encoding="utf-8")
-        m = re.search(r'^description:\s*["\']?(.*?)["\']?\s*$', text, re.MULTILINE)
-        if m:
-            desc = m.group(1).strip()
-            return (desc[:60] + "…") if len(desc) > 60 else desc
-    except (IOError, OSError):
-        pass
+    for path in candidates:
+        if not path.exists():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            m = re.search(r'^description:\s*["\']?(.*?)["\']?\s*$', text, re.MULTILINE)
+            if m:
+                desc = m.group(1).strip()
+                return (desc[:60] + "…") if len(desc) > 60 else desc
+        except (IOError, OSError):
+            continue
     return ""
 
 
@@ -193,48 +211,53 @@ def main():
         return
 
     local_skills = get_local_skills()
+    commands = get_installed_commands()
     plugin_map = get_installed_plugins()
-    installed = local_skills | set(plugin_map.keys())
+    installed = local_skills | commands | set(plugin_map.keys())
     usage = get_skill_usage()
 
     used = {k: v for k, v in usage.items() if k in installed}
-    deleted_but_used = {k: v for k, v in usage.items() if k not in installed}
+    removed_but_used = {k: v for k, v in usage.items() if k not in installed}
     never_used = installed - set(usage.keys())
 
     print("# Claude Skill Usage Stats")
-    print(f"분석일: {datetime.now().strftime('%Y-%m-%d')}\n")
+    print(f"Analyzed: {datetime.now().strftime('%Y-%m-%d')}\n")
 
-    # --- Used skills ---
-    print(f"## 사용 기록 있는 스킬 ({len(used)}개)\n")
+    # --- Used ---
+    print(f"## Skills with usage history ({len(used)})\n")
     if used:
-        print(f"{'횟수':>6}  {'마지막 사용':12}  스킬")
+        print(f"{'Count':>6}  {'Last used':12}  Skill")
         print("-" * 50)
         for skill, info in sorted(used.items(), key=lambda x: -x[1]["count"]):
             last = info["last_used"] or "-"
-            print(f"{info['count']:>6}회  {last:12}  {skill}")
+            print(f"{info['count']:>6}  {last:12}  {skill}")
     else:
-        print("(없음)")
+        print("(none)")
 
-    # --- Never used skills ---
-    print(f"\n## 한 번도 안 쓴 스킬 ({len(never_used)}개)\n")
+    # --- Never used ---
+    print(f"\n## Never-used ({len(never_used)})\n")
     for skill in sorted(never_used):
-        tag = " [plugin]" if skill in plugin_map else ""
+        if skill in plugin_map:
+            tag = " [plugin]"
+        elif skill in commands:
+            tag = " [command]"
+        else:
+            tag = ""
         desc = get_skill_description(skill, plugin_map.get(skill))
         desc_str = f"  # {desc}" if desc else ""
         print(f"  - {skill}{tag}{desc_str}")
 
-    # --- Previously used but now deleted ---
-    if deleted_but_used:
-        print(f"\n## 삭제됐지만 사용 기록 있었던 스킬 ({len(deleted_but_used)}개)\n")
-        for skill, info in sorted(deleted_but_used.items(), key=lambda x: -x[1]["count"]):
-            print(f"  {info['count']:>4}회  {info['last_used'] or '-':12}  {skill}")
+    # --- Previously used, now removed ---
+    if removed_but_used:
+        print(f"\n## Previously used, now removed ({len(removed_but_used)})\n")
+        for skill, info in sorted(removed_but_used.items(), key=lambda x: -x[1]["count"]):
+            print(f"  {info['count']:>4}  {info['last_used'] or '-':12}  {skill}")
 
-    plugin_count = len(plugin_map)
     print(f"\n---")
     print(
-        f"설치된 스킬: {len(installed)}개 "
-        f"(로컬 {len(local_skills)}개 + 플러그인 {plugin_count}개) | "
-        f"사용한 스킬: {len(used)}개 | 미사용: {len(never_used)}개"
+        f"Installed: {len(installed)} "
+        f"(local {len(local_skills)} + commands {len(commands)} + plugins {len(plugin_map)}) | "
+        f"Used: {len(used)} | Unused: {len(never_used)}"
     )
 
 
