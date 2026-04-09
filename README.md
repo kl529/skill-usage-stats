@@ -11,10 +11,10 @@
 | Step | Action |
 |------|--------|
 | 1. Scan | Reads all session files in `~/.claude/projects/` |
-| 2. Report | Shows each skill's invocation count, sorted by frequency |
-| 3. Highlight | Lists skills installed but never used |
+| 2. Report | Shows each skill's invocation count and last-used date, sorted by frequency |
+| 3. Highlight | Lists installed skills never used, with their descriptions |
 | 4. Suggest | Recommends deletion candidates with reasons |
-| 5. Remove | Deletes unused skills on your confirmation |
+| 5. Remove | Deletes confirmed skills — handles both local skills and plugins automatically |
 
 ---
 
@@ -38,10 +38,10 @@ cp -r skills/skill-usage-stats ~/.claude/skills/
 Trigger with any of these phrases:
 
 ```
-스킬 통계        (Korean)
-어떤 스킬 썼어   (Korean)
 skill stats
 skill usage
+스킬 통계
+어떤 스킬 썼어
 ```
 
 ---
@@ -50,27 +50,28 @@ skill usage
 
 ```
 # Claude Skill Usage Stats
-분석일: 2026-04-09
+Analyzed: 2026-04-09
 
-## 사용 기록 있는 스킬 (12개)
+## Skills with usage history (13)
 
-  횟수  스킬
-------------------------------
-    31회  qa
-    13회  design-review
-     7회  investigate
-     4회  review
-     2회  commit
+ Count  Last used     Skill
+--------------------------------------------------
+    31  2026-04-08    qa
+    13  2026-04-08    design-review
+     7  2026-04-06    investigate
+     2  2026-04-07    browse
+     1  2026-03-19    azure-pr
 
-## 한 번도 안 쓴 스킬 (52개)
+## Never-used skills (155)
 
   - autoplan
   - brand-guidelines
-  - canvas-design
+  - frontend-design [plugin]
+  - agent-architecture:bdi-mental-states [plugin]  # Explores BDI mental state…
   - ...
 
 ---
-설치된 스킬: 64개 | 사용한 스킬: 12개 | 미사용: 52개
+Installed: 168 (local 64 + plugins 104) | Used: 13 | Unused: 155
 ```
 
 After the report, Claude suggests deletion candidates with a one-line reason each, then waits for your confirmation before removing anything.
@@ -79,7 +80,7 @@ After the report, Claude suggests deletion candidates with a one-line reason eac
 
 ## How it works
 
-`analyze.py` scans every `.jsonl` file under `~/.claude/projects/` for entries containing `commandName`. This field is written each time a skill is invoked, capturing all invocations regardless of trigger method (slash command or natural language).
+`analyze.py` scans every `.jsonl` session file under `~/.claude/projects/` for entries containing `commandName`. This field is written each time a skill is invoked — regardless of whether it was triggered via slash command or natural language.
 
 ```
 ~/.claude/projects/
@@ -87,16 +88,17 @@ After the report, Claude suggests deletion candidates with a one-line reason eac
         └── <session-id>.jsonl   ← scanned here
 ```
 
-Installed skills are discovered by listing directories under `~/.claude/skills/`.
+Installed skills are discovered from two sources:
+- **Local skills** — directories under `~/.claude/skills/`
+- **Plugins** — entries in `~/.claude/plugins/installed_plugins.json`, resolved to their sub-skill names
+
+Deletion via `--delete` handles both: removes local skill directories and cleans up `installed_plugins.json` + plugin cache for plugin skills.
 
 ---
 
 ## Known limitations
 
-- **Plugins not counted** — skills installed via `~/.claude/plugins/` are not included in the installed set.
 - **No date filtering** — stats are all-time; no "last 30 days" view.
-- **No last-used date** — shows how many times, not when.
-- **Plugin deletion is manual** — cleanup of `installed_plugins.json` + plugin cache is not automated.
 
 ---
 

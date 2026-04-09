@@ -59,7 +59,7 @@ def get_installed_plugins():
             for sub in skills_subdir.iterdir():
                 if not sub.is_dir():
                     continue
-                skill_id = base_name if sub.name == base_name else f"{base_name}:{sub.name}"
+                skill_id = f"{base_name}:{sub.name}"
                 result[skill_id] = {"plugin_key": plugin_key, "install_path": str(install_path)}
 
     except (json.JSONDecodeError, KeyError, IndexError):
