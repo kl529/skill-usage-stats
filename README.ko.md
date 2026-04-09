@@ -20,6 +20,11 @@
 
 ## 설치
 
+**skills.sh 경유:**
+```bash
+npx skills add kl529/skill-usage-stats
+```
+
 **플러그인 마켓플레이스:**
 ```bash
 /plugin marketplace add kl529/skill-usage-stats
@@ -93,10 +98,7 @@ skill usage
 
 ## 현재 한계
 
-- **플러그인 미집계** — `~/.claude/plugins/`에 설치된 스킬은 설치 목록에 포함되지 않음
 - **날짜 필터 없음** — 전체 기간 통계만 제공, "최근 30일" 같은 필터 없음
-- **마지막 사용일 없음** — 몇 번 썼는지는 알 수 있지만 언제 썼는지는 모름
-- **플러그인 삭제 미자동화** — `installed_plugins.json` 수정 + 캐시 정리는 자동으로 처리되지 않음
 
 ---
 

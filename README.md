@@ -20,6 +20,11 @@
 
 ## Installation
 
+**Via skills.sh:**
+```bash
+npx skills add kl529/skill-usage-stats
+```
+
 **Via plugin marketplace:**
 ```bash
 /plugin marketplace add kl529/skill-usage-stats
