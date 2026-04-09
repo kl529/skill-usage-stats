@@ -1,0 +1,3 @@
+name: skill-usage-stats
+description: "Claude Code 히스토리를 분석해서 스킬 사용 통계를 출력. 설치된 스킬 중 한 번도 안 쓴 것과 자주 쓰는 것을 구분해줌. '스킬 통계', '어떤 스킬 썼어', 'skill stats', 'skill usage' 요청 시 실행."
+version: 1.0.0

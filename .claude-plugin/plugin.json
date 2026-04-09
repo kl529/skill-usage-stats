@@ -1,0 +1,20 @@
+{
+  "name": "skill-usage-stats",
+  "description": "Analyze Claude Code skill usage from session history. Shows which skills you actually use, how often, and helps you clean up unused ones.",
+  "version": "1.0.0",
+  "author": {
+    "name": "kl529",
+    "url": "https://github.com/kl529"
+  },
+  "homepage": "https://github.com/kl529/skill-usage-stats",
+  "repository": "https://github.com/kl529/skill-usage-stats",
+  "license": "MIT",
+  "keywords": [
+    "skill",
+    "usage",
+    "stats",
+    "analytics",
+    "cleanup",
+    "claude-code"
+  ]
+}

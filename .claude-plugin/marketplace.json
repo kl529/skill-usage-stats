@@ -1,0 +1,15 @@
+{
+  "name": "skill-usage-stats",
+  "owner": {
+    "name": "kl529",
+    "url": "https://github.com/kl529"
+  },
+  "plugins": [
+    {
+      "name": "skill-usage-stats",
+      "source": "./",
+      "description": "Analyze Claude Code skill usage from session history. Shows which skills you actually use, how often, and helps you clean up unused ones.",
+      "version": "1.0.0"
+    }
+  ]
+}
